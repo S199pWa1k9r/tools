@@ -58,6 +58,10 @@ for ARG in ${@}; do
 		echo ">>> Removing dvd image"
 		rm -f ${IMAGESDIR}/*-${PRODUCT_FLAVOUR}-dvd-${PRODUCT_ARCH}.iso*
 		;;
+	image)
+		echo ">>> Removing flash image"
+		rm -f ${IMAGESDIR}/${PRODUCT_RELEASE}-mmc-${PRODUCT_ARCH}-${PRODUCT_DEVICE}.img
+		;;
 	images)
 		setup_stage ${IMAGESDIR}
 		;;

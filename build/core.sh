@@ -46,7 +46,7 @@ lock_packages ${STAGEDIR}
 
 for BRANCH in ${DEVELBRANCH} ${COREBRANCH}; do
 	setup_copy ${STAGEDIR} ${COREDIR}
-	git_reset ${STAGEDIR}${COREDIR} ${BRANCH}
+#	git_reset ${STAGEDIR}${COREDIR} ${BRANCH}
 
 	CORE_ARGS="CORE_ARCH=${PRODUCT_ARCH} CORE_FLAVOUR=${PRODUCT_FLAVOUR} ${COREENV}"
 
@@ -60,6 +60,7 @@ for BRANCH in ${DEVELBRANCH} ${COREBRANCH}; do
 
 	install_packages ${STAGEDIR} ${CORE_DEPS}
 	custom_packages ${STAGEDIR} ${COREDIR} "${CORE_ARGS}"
+	echo ">>> Custom done:"
 done
 
 bundle_packages ${STAGEDIR} ${SELF}

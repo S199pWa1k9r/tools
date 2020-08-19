@@ -36,6 +36,17 @@ if [ ${PRODUCT_HOST} = ${PRODUCT_ARCH} ]; then
 	exit 0
 fi
 
+CLANGFIXUPFILE=${SRCDIR}/contrib/llvm-project/compiler-rt/lib/cfi/cfi_blacklist.txt
+CLANGFIXUPDIR=/usr/lib/clang/11.0.0/share
+
+if [ -f ${CLANGFIXUPFILE} ]; then
+	mkdir -p ${CLANGFIXUPDIR}
+	cp ${CLANGFIXUPFILE} ${CLANGFIXUPDIR}
+else
+	mkdir -p ${CLANGFIXUPDIR}
+	touch ${CLANGFIXUPDIR}/cfi_blacklist.txt
+fi
+
 XTOOLS_SET=$(find ${SETSDIR} -name "xtools-*-${PRODUCT_ARCH}.txz")
 
 if [ -f "${XTOOLS_SET}" -a -z "${1}" ]; then
@@ -57,11 +68,15 @@ MAKE_ARGS="${MAKE_ARGS} SRCCONF=${CONFIGDIR}/src.conf __MAKE_CONF="
 
 ${ENV_FILTER} make -C${SRCDIR} -j${CPUS} native-xtools ${MAKE_ARGS} NO_CLEAN=yes
 
-XTOOLS_DIR=$(make -C${SRCDIR} -f Makefile.inc1 -V OBJTREE ${MAKE_ARGS})/nxb-bin
+XTOOLS_DIR=$(make -C${SRCDIR} -f Makefile.inc1 -V NXBDESTDIR ${MAKE_ARGS})
 
-${ENV_FILTER} make -C${SRCDIR} -j${CPUS} native-xtools-install ${MAKE_ARGS} NO_CLEAN=yes DESTDIR=${XTOOLS_DIR}/..
+if [ "${SRCREVISION}" = "13.0" ]; then
+	# XXX as long as we support 11.2 we need this as a conditional and
+	# maybe later we want to directly install into a stage dir...
+	${ENV_FILTER} make -C${SRCDIR} -j${CPUS} native-xtools-install ${MAKE_ARGS} NO_CLEAN=yes DESTDIR=${XTOOLS_DIR}/..
+fi
 
-echo -n ">>> Generating xtools set... "
+echo -n ">>> Generating xtools set: ${XTOOLS_SET}"
 
 tar -C ${XTOOLS_DIR} -cJf ${XTOOLS_SET} .
 

@@ -26,7 +26,7 @@
 STEPS=		arm base boot chroot clean compress confirm core distfiles \
 		download dvd fingerprint info kernel nano packages plugins \
 		ports prefetch print rebase release rename rewind serial sign \
-		skim test update upload verify vga vm xtools
+		skim test update upload verify vga vm xtools mmc
 SCRIPTS=	batch hotfix nightly
 
 .PHONY:		${STEPS} ${SCRIPTS}
@@ -52,7 +52,7 @@ lint: lint-steps lint-composite
 
 # Special vars to load early build.conf settings:
 
-TOOLSDIR?=	/usr/tools
+TOOLSDIR?=	${.CURDIR}
 TOOLSBRANCH?=	master
 SETTINGS?=	20.7
 
@@ -68,9 +68,9 @@ SUFFIX?=	#-devel
 FLAVOUR?=	OpenSSL LibreSSL # first one is default
 _ARCH!=		uname -p
 ARCH?=		${_ARCH}
-KERNEL?=	SMP
+KERNEL?=	ROCK-PI-E
 ADDITIONS?=	os-dyndns${SUFFIX}
-DEVICE?=	A10
+DEVICE?=	ROCK-PI-E
 SPEED?=		115200
 UEFI?=		yes
 GITBASE?=	https://github.com/opnsense
@@ -84,35 +84,54 @@ SERVER?=	user@does.not.exist
 UPLOADDIR?=	.
 _VERSION!=	date '+%Y%m%d%H%M'
 VERSION?=	${_VERSION}
-STAGEDIRPREFIX?=/usr/obj
+
+STAGEDIRPREFIX?=${TOOLSDIR}/_BE/obj
 
 PORTSREFURL?=	https://git-01.md.hardenedbsd.org/HardenedBSD/hardenedbsd-ports.git
-PORTSREFDIR?=	/usr/hardenedbsd-ports
+PORTSREFDIR?=	${TOOLSDIR}/_BE/hardenedbsd-ports
 PORTSREFBRANCH?=master
 
 PLUGINSENV?=	PLUGIN_PHP=${PHP} PLUGIN_ABI=${SETTINGS} PLUGIN_PYTHON=${PYTHON}
-PLUGINSDIR?=	/usr/plugins
-PLUGINSBRANCH?=	stable/${SETTINGS}
-PORTSDIR?=	/usr/ports
+PLUGINSDIR?=	${TOOLSDIR}/_BE/plugins
+PLUGINSBRANCH?=	master
+PORTSDIR?=	${TOOLSDIR}/_BE/ports
 PORTSBRANCH?=	master
-COREDIR?=	/usr/core
-COREBRANCH?=	stable/${SETTINGS}
+COREDIR?=	${TOOLSDIR}/_BE/core
+COREBRANCH?=	master
 COREENV?=	CORE_PHP=${PHP} CORE_ABI=${SETTINGS} CORE_PYTHON=${PYTHON}
-SRCDIR?=	/usr/src
-SRCBRANCH?=	stable/${SETTINGS}
+SRCDIR?=	${TOOLSDIR}/_BE/src
+SRCBRANCH?=	master
 
-# for plugins and core
-DEVELBRANCH?=	#master
+VERBOSE=	YES
+
+# for ports and core
+DEVELBRANCH?=	# master
+
+# Install bootstrap packages
+bootstrap:
+	pkg install -y sysutils/htop misc/mc screen lighttpd
+	pkg install -y ports-mgmt/poudriere-devel
+	pkg install -y devel/git
 
 # A couple of meta-targets for easy use and ordering:
+distfiles: base
 
-ports distfiles: base
+ports: base
+
 plugins: ports
+
 core: plugins
-packages test: core
-dvd nano serial vga vm: packages kernel
+
+packages: core
+
+test: core
+
 sets: distfiles packages kernel
-images: dvd nano serial vga vm # arm
+
+mmc dvd nano serial vga vm: packages kernel
+
+images: mmc # dvd nano serial vga vm 
+
 release: dvd nano serial vga
 
 # Expand target arguments for the script append:
@@ -160,3 +179,4 @@ ${SCRIPT}: lint-composite
 	${VERBOSE_HIDDEN} cd ${.CURDIR} && FLAVOUR="${FLAVOUR}" \
 	    sh ${VERBOSE_FLAGS} ./composite/${SCRIPT}.sh ${${SCRIPT}_ARGS}
 .endfor
+

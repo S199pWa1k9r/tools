@@ -239,8 +239,9 @@ fi
 # load device-specific environment
 . ${DEVICEDIR}/${PRODUCT_DEVICE_REAL}.conf
 
+# XXX commented out temporarily. treat all kernel as GENERIC SMP
 # reload the kernel according to device specifications
-export PRODUCT_KERNEL="${PRODUCT_KERNEL}${PRODUCT_DEVICE+"-${PRODUCT_DEVICE}"}"
+# export PRODUCT_KERNEL="${PRODUCT_KERNEL}${PRODUCT_DEVICE+"-${PRODUCT_DEVICE}"}"
 
 # define and bootstrap target directories
 export STAGEDIR="${STAGEDIRPREFIX}${CONFIGDIR}/${PRODUCT_FLAVOUR}:${PRODUCT_ARCH}"
@@ -264,7 +265,6 @@ export PRODUCT_PLUGIN="os-*${PRODUCT_SUFFIX}"
 
 # get the current version for the selected source repository
 eval export SRC$(grep ^REVISION= ${SRCDIR}/sys/conf/newvers.sh)
-export SRCABI="FreeBSD:${SRCREVISION%%.*}:${PRODUCT_ARCH}"
 
 case "${SELF}" in
 confirm|fingerprint|info|print)
@@ -301,7 +301,7 @@ git_fetch()
 {
 	echo ">>> Fetching ${1}:"
 
-	git -C ${1} fetch --tags --prune origin
+	git -C ${1} fetch --all --prune
 }
 
 git_clone()
@@ -456,7 +456,7 @@ setup_xbase()
 
 	echo ">>> Cleaning up xtools in ${1}"
 
-	rm -f ${1}/usr/bin/qemu-*-static ${1}/etc/rc.conf.local
+	rm -f ${1}/usr/local/bin/qemu-*-static ${1}/etc/rc.conf.local
 
 	XTOOLS_SET=$(find ${SETSDIR} -name "xtools-*-${PRODUCT_ARCH}.txz")
 	if [ -z "${XTOOLS_SET}" ]; then
@@ -620,12 +620,10 @@ setup_entropy()
 setup_set()
 {
 	tar -C ${1} -xJpf ${2}
-	rm -f {1}/.abi_hint
 }
 
 generate_set()
 {
-	echo ${SRCABI} > ${1}/.abi_hint
 	tar -C ${1} -cvf - . | xz > ${2}
 }
 
@@ -870,6 +868,7 @@ bundle_packages()
 	shift
 
 	REDOS=${@}
+	set -x 
 
 	git_describe ${PORTSDIR}
 
@@ -925,8 +924,6 @@ bundle_packages()
 
 	# generate index files
 	pkg repo ${BASEDIR}${PACKAGESDIR}-new/ ${SIGNARGS}
-
-	echo ${SRCABI} > ${BASEDIR}${PACKAGESDIR}-new/.abi_hint
 
 	sh ./clean.sh packages
 

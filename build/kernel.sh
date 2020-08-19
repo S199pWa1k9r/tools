@@ -61,6 +61,7 @@ ${MAKE_ARGS_DEV}
 if [ ${PRODUCT_HOST} != ${PRODUCT_ARCH} ]; then
 	${ENV_FILTER} make -s -C${SRCDIR} -j${CPUS} kernel-toolchain ${MAKE_ARGS}
 fi
+
 ${ENV_FILTER} make -s -C${SRCDIR} -j${CPUS} buildkernel ${MAKE_ARGS} NO_KERNELCLEAN=yes
 ${ENV_FILTER} make -s -C${SRCDIR}/release obj ${MAKE_ARGS}
 
@@ -72,6 +73,7 @@ setup_stage "${KERNEL_OBJDIR}/${KERNEL_DISTDIR}"
 # remove older object archives, too
 KERNEL_OBJ=$(make -C${SRCDIR}/release -V .OBJDIR)/kernel.txz
 DEBUG_OBJ=$(make -C${SRCDIR}/release -V .OBJDIR)/kernel-dbg.txz
+
 rm -f ${KERNEL_OBJ} ${DEBUG_OBJ}
 
 # We used kernel.txz because we did not rewrite it,
@@ -80,6 +82,7 @@ rm -f ${KERNEL_OBJ} ${DEBUG_OBJ}
 # a convoluted action, but the archive gives us a
 # full update set so we repack it instead of using
 # src-related commands here too loosely...
+
 ${ENV_FILTER} make -s -C${SRCDIR}/release kernel.txz ${MAKE_ARGS}
 
 sh ./clean.sh ${SELF}
@@ -87,6 +90,11 @@ sh ./clean.sh ${SELF}
 setup_stage ${STAGEDIR} work
 
 echo ">>> Generating kernel set:"
+
+# XXX Temporary fix for cross build
+if [ ${PRODUCT_HOST} != ${PRODUCT_ARCH} ]; then
+	ln -s /usr/obj${SRCDIR}/${PRODUCT_TARGET}.${PRODUCT_ARCH}/release/kernel.txz ${KERNEL_OBJ}
+fi
 
 setup_set ${STAGEDIR}/work ${KERNEL_OBJ}
 
@@ -100,3 +108,4 @@ fi
 setup_version ${STAGEDIR} ${STAGEDIR}/work ${SELF}
 generate_set ${STAGEDIR}/work ${KERNEL_SET}
 generate_signature ${KERNEL_SET}
+

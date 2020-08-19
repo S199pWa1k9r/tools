@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2014-2020 Franco Fichtner <franco@opnsense.org>
+# Copyright (c) 2014-2019 Franco Fichtner <franco@opnsense.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -38,18 +38,19 @@ if [ -f "${BASE_SET}" -a -z "${1}" ]; then
 	exit 0
 fi
 
-git_branch ${SRCDIR} ${SRCBRANCH} SRCBRANCH
-git_describe ${SRCDIR}
-
-CLANGFIXUPFILE=${SRCDIR}/contrib/compiler-rt/lib/cfi/cfi_blacklist.txt
-CLANGFIXUPDIR=/usr/lib/clang/8.0.1/share
+CLANGFIXUPFILE=${SRCDIR}/contrib/llvm-project/compiler-rt/lib/cfi/cfi_blacklist.txt
+CLANGFIXUPDIR=/usr/lib/clang/11.0.0/share
 
 if [ -f ${CLANGFIXUPFILE} ]; then
-	# FreeBSD 12.1 requires this file to be installed in
-	# the host, but it is not in the default install.
-	mkdir -p ${CLANGFIXUPDIR}
-	cp ${CLANGFIXUPFILE} ${CLANGFIXUPDIR}
+        mkdir -p ${CLANGFIXUPDIR}
+        cp ${CLANGFIXUPFILE} ${CLANGFIXUPDIR}
+else
+        mkdir -p ${CLANGFIXUPDIR}
+        touch ${CLANGFIXUPDIR}/cfi_blacklist.txt
 fi
+
+git_branch ${SRCDIR} ${SRCBRANCH} SRCBRANCH
+git_describe ${SRCDIR}
 
 MAKE_ARGS="
 TARGET_ARCH=${PRODUCT_ARCH}
@@ -65,10 +66,11 @@ ${ENV_FILTER} make -s -C${SRCDIR}/release obj ${MAKE_ARGS}
 # reset the distribution directory
 BASE_DISTDIR="$(make -C${SRCDIR}/release -V DISTDIR)/${SELF}"
 BASE_OBJDIR="$(make -C${SRCDIR}/release -V .OBJDIR)"
+
 setup_stage "${BASE_OBJDIR}/${BASE_DISTDIR}"
 
 # remove older object archives, too
-BASE_OBJ=$(make -C${SRCDIR}/release -V .OBJDIR)/base.txz
+BASE_OBJ=${BASE_OBJDIR}/base.txz
 rm -f ${BASE_OBJ}
 
 ${ENV_FILTER} make -s -C${SRCDIR}/release base.txz ${MAKE_ARGS}
@@ -77,9 +79,14 @@ sh ./clean.sh ${SELF}
 
 setup_stage ${STAGEDIR} work
 
-echo ">>> Generating base set:"
-
 BASE_SET=${SETSDIR}/base-${REPO_VERSION}-${PRODUCT_ARCH}${PRODUCT_DEVICE+"-${PRODUCT_DEVICE}"}.txz
+
+echo ">>> Generating base set: ${BASE_SET}"
+
+# XXX Temporary fix for cross build
+if [ ${PRODUCT_HOST} != ${PRODUCT_ARCH} ]; then
+	ln -s /usr/obj${SRCDIR}/${PRODUCT_TARGET}.${PRODUCT_ARCH}/release/base.txz ${BASE_OBJ}
+fi
 
 setup_set ${STAGEDIR}/work ${BASE_OBJ}
 
@@ -117,3 +124,4 @@ echo "done"
 setup_version ${STAGEDIR} ${STAGEDIR}/work ${SELF} ${STAGEDIR}/obsolete
 generate_set ${STAGEDIR}/work ${BASE_SET}
 generate_signature ${BASE_SET}
+

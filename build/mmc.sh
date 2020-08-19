@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2017-2019 Franco Fichtner <franco@opnsense.org>
+# Copyright (c) 2017-2020 Sleep Walker <s199p.wa1k9r@gmail.com>
 # Copyright (c) 2015-2017 The FreeBSD Foundation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
 
 set -e
 
-SELF=arm
+SELF=image
 
 . ./common.sh
 
@@ -45,7 +45,7 @@ if [ -n "${1}" ]; then
 	ARMSIZE=${1}
 fi
 
-ARMIMG="${IMAGESDIR}/${PRODUCT_RELEASE}-arm-${PRODUCT_ARCH}-${PRODUCT_DEVICE}.img"
+ARMIMG="${IMAGESDIR}/${PRODUCT_RELEASE}-mmc-${PRODUCT_ARCH}-${PRODUCT_DEVICE}.img"
 ARMLABEL="${PRODUCT_NAME}"
 
 sh ./clean.sh ${SELF}
@@ -56,53 +56,60 @@ truncate -s ${ARMSIZE} ${ARMIMG}
 
 DEV=$(mdconfig -a -t vnode -f ${ARMIMG} -x 63 -y 255)
 
-ARM_FAT_SIZE=${ARM_FAT_SIZE:-"50m -b 1m"}
+echo ">>> Building MMC image..."
 
-gpart create -s MBR ${DEV}
-gpart add -t '!12' -a 512k -s ${ARM_FAT_SIZE} ${DEV}
-gpart set -a active -i 1 ${DEV}
-newfs_msdos -L msdosboot -F 16 /dev/${DEV}s1
-gpart add -t freebsd ${DEV}
-gpart create -s bsd ${DEV}s2
-gpart add -t freebsd-ufs -a 64k /dev/${DEV}s2
-newfs -U -L ${ARMLABEL} /dev/${DEV}s2a
-mount /dev/${DEV}s2a ${STAGEDIR}
+gpart create -s GPT ${DEV}
+gpart add -t efi -l efi -a 512k -s 50m -b 16m ${DEV}
+gpart add -t freebsd-ufs -l ${ARMLABEL} -a 64k /dev/${DEV}
+newfs_msdos -L efi      /dev/${DEV}p1
+newfs -U -L ${ARMLABEL} /dev/${DEV}p2
+
+mount /dev/${DEV}p2 ${STAGEDIR}
 
 setup_base ${STAGEDIR}
 setup_kernel ${STAGEDIR}
-setup_xtools ${STAGEDIR}
 setup_packages ${STAGEDIR}
 setup_extras ${STAGEDIR} ${SELF}
 setup_entropy ${STAGEDIR}
-setup_xbase ${STAGEDIR}
 
 cat > ${STAGEDIR}/etc/fstab << EOF
 # Device		Mountpoint	FStype	Options		Dump	Pass#
-/dev/ufs/${ARMLABEL}	/		ufs	rw		1	1
-/dev/msdosfs/MSDOSBOOT	/boot/msdos	msdosfs	rw,noatime	0	0
+/dev/gpt/${ARMLABEL}	/		ufs	rw		1	1
+/dev/gpt/efi		/boot/efi	msdosfs	rw,noauto	0	0
 EOF
 
-mkdir -p ${STAGEDIR}/boot/msdos
-mount_msdosfs /dev/${DEV}s1 ${STAGEDIR}/boot/msdos
+mkdir -p ${STAGEDIR}/boot/efi
+mount -t msdosfs /dev/${DEV}p1 ${STAGEDIR}/boot/efi
 
-arm_mount()
+if [ -f ${STAGEDIR}/boot/loader.efi ] ; then
+	echo ">>> Install loader CONF"
+	mmc_install_loader
+
+	echo ">>> Install loader EFI"
+	mkdir -p ${STAGEDIR}/boot/efi/EFI/BOOT
+	cp ${STAGEDIR}/boot/loader.efi ${STAGEDIR}/boot/efi/EFI/BOOT/bootaa64.efi
+	echo ">>> Install DTB"
+	cp -r ${STAGEDIR}/boot/dtb ${STAGEDIR}/boot/efi
+fi
+
+mmc_mount()
 {
-	mount /dev/${DEV}s2a ${STAGEDIR}
-	mount_msdosfs /dev/${DEV}s1 ${STAGEDIR}/boot/msdos
+	mount /dev/${DEV}p1 ${STAGEDIR}
+	mount_msdosfs /dev/${DEV}p1 ${STAGEDIR}/boot/efi
 }
 
-arm_unmount()
+mmc_unmount()
 {
 	sync
-	umount ${STAGEDIR}/boot/msdos
+	umount ${STAGEDIR}/boot/efi
 	umount ${STAGEDIR}
 }
 
-echo -n ">>> Building arm image... "
+mmc_unmount
 
-arm_install_uboot
+echo -n ">>> Install U-Boot ... "
+mmc_install_uboot
 
-arm_unmount
 mdconfig -d -u ${DEV}
 
 echo "done"
