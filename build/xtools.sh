@@ -36,8 +36,8 @@ if [ ${PRODUCT_HOST} = ${PRODUCT_ARCH} ]; then
 	exit 0
 fi
 
-CLANGFIXUPFILE=${SRCDIR}/contrib/llvm-project/compiler-rt/lib/cfi/cfi_blacklist.txt
-CLANGFIXUPDIR=/usr/lib/clang/11.0.0/share
+CLANGFIXUPFILE=${SRCDIR}/contrib/compiler-rt/lib/cfi/cfi_blacklist.txt
+CLANGFIXUPDIR=/usr/lib/clang/10.0.1/share
 
 if [ -f ${CLANGFIXUPFILE} ]; then
 	mkdir -p ${CLANGFIXUPDIR}

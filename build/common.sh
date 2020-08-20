@@ -278,10 +278,8 @@ confirm|fingerprint|info|print)
 	;;
 esac
 
-PKGBIN=$(which pkg || true)
-
 for WANT in git ${PRODUCT_WANTS}; do
-	if ! ${PKGBIN} info ${WANT} > /dev/null; then
+	if ! pkg info ${WANT} > /dev/null; then
 		echo ">>> Required build package '${WANT}' is not installed." >&2
 		exit 1
 	fi

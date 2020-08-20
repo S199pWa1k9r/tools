@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2020 Franco Fichtner <franco@opnsense.org>
+# Copyright (c) 2015-2019 Franco Fichtner <franco@opnsense.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -94,11 +94,16 @@ PORTSREFBRANCH?=master
 PLUGINSENV?=	PLUGIN_PHP=${PHP} PLUGIN_ABI=${SETTINGS} PLUGIN_PYTHON=${PYTHON}
 PLUGINSDIR?=	${TOOLSDIR}/_BE/plugins
 PLUGINSBRANCH?=	master
-PORTSDIR?=	${TOOLSDIR}/_BE/ports
-PORTSBRANCH?=	master
+
+COREENV?=	CORE_PHP=${PHP} CORE_ABI=${SETTINGS} CORE_PYTHON=${PYTHON}
 COREDIR?=	${TOOLSDIR}/_BE/core
 COREBRANCH?=	master
-COREENV?=	CORE_PHP=${PHP} CORE_ABI=${SETTINGS} CORE_PYTHON=${PYTHON}
+
+PORTSDIR?=	${TOOLSDIR}/_BE/ports
+PORTSDIR=	/usr/ports
+PORTSBRANCH?=	master
+
+SRCURL?=	https://github.com/freebsd/freebsd.git
 SRCDIR?=	${TOOLSDIR}/_BE/src
 SRCBRANCH?=	master
 
@@ -109,7 +114,7 @@ DEVELBRANCH?=	# master
 
 # Install bootstrap packages
 bootstrap:
-	pkg install -y sysutils/htop misc/mc screen lighttpd
+	pkg install -y sysutils/htop screen lighttpd
 	pkg install -y ports-mgmt/poudriere-devel
 	pkg install -y devel/git
 

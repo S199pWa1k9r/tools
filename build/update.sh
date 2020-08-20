@@ -60,6 +60,7 @@ for ARG in ${ARGS}; do
 	src)
 		BRANCHES=${SRCBRANCH}
 		DIR=${SRCDIR}
+		URL=${SRCURL}
 		;;
 	tools)
 		BRANCHES=${TOOLSBRANCH}
